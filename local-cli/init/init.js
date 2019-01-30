@@ -82,9 +82,11 @@ function generateProject(destinationRoot, newProjectName, options) {
   if (yarnVersion) {
     console.log('Adding React...');
     execSync(`yarn add react@${reactVersion}`, {stdio: 'inherit'});
+    execSync(`yarn add babel-plugin-module-resolver`, {stdio: 'inherit'});
   } else {
     console.log('Installing React...');
     execSync(`npm install react@${reactVersion} --save --save-exact`, {stdio: 'inherit'});
+    execSync(`npm install babel-plugin-module-resolver --save-dev`);
   }
   if (!options['skip-jest']) {
     const jestDeps = (
@@ -113,7 +115,7 @@ function addJestToPackageJson(destinationRoot) {
   packageJSON.jest = {
     preset: 'react-native-macos'
   };
-  fs.writeFileSync(packageJSONPath, JSON.stringify(packageJSON, null, '\t'));
+  fs.writeFileSync(packageJSONPath, JSON.stringify(packageJSON, null, 2));
 }
 
 module.exports = init;

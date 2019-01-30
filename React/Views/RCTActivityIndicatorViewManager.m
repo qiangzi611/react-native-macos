@@ -32,21 +32,24 @@ RCT_EXPORT_MODULE()
 {
   RCTActivityIndicatorView* indicator = [[RCTActivityIndicatorView alloc] init];
   [indicator setControlSize:NSRegularControlSize];
-  [indicator setStyle:NSProgressIndicatorSpinningStyle];
+  [indicator setStyle:NSProgressIndicatorStyleSpinning];
   [indicator setUsesThreadedAnimation:YES];
   [indicator setDisplayedWhenStopped:NO];
   [indicator setHidden:YES];
+  indicator.controlTint = NSClearControlTint;
+  indicator.wantsLayer = YES;
+  
   return indicator;
 }
 
 //RCT_EXPORT_VIEW_PROPERTY(color, NSColor) // implement drawRect
+RCT_REMAP_VIEW_PROPERTY(color, controlTint, NSColor)
 //RCT_EXPORT_VIEW_PROPERTY(hidesWhenStopped, BOOL)
-//RCT_REMAP_VIEW_PROPERTY(size, activityIndicatorViewStyle, NSProgressIndicatorSpinningStyle)
-RCT_CUSTOM_VIEW_PROPERTY(animating, BOOL, RCTActivityIndicatorView)
+
+RCT_CUSTOM_VIEW_PROPERTY(animating, BOOL, __unused RCTActivityIndicatorView)
 {
   //TODO: store animated property because NSProgressIndicator doesn't have a suitable method
   BOOL animating = json ? [RCTConvert BOOL:json] : YES;
-  NSLog(@"animation %hdd", animating);
   if (animating) {
     [view setHidden:NO];
     [view startAnimation:self];
@@ -55,7 +58,5 @@ RCT_CUSTOM_VIEW_PROPERTY(animating, BOOL, RCTActivityIndicatorView)
     [view setHidden:YES];
   }
 }
-
-
 
 @end

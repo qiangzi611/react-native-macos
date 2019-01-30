@@ -12,8 +12,11 @@
 'use strict';
 
 const BatchedBridge = require('BatchedBridge');
+const ExceptionsManager = require('ExceptionsManager');
 
 const invariant = require('fbjs/lib/invariant');
+
+import type {ExtendedError} from 'parseErrorStack';
 
 type ModuleConfig = [
   string, /* name */
@@ -80,6 +83,12 @@ function genMethod(moduleID: number, methodID: number, type: MethodType) {
     };
   } else if (type === 'sync') {
     fn = function(...args: Array<any>) {
+      if (__DEV__) {
+        invariant(global.nativeCallSyncHook, 'Calling synchronous methods on native ' +
+          'modules is not supported in Chrome.\n\n Consider providing alternative ' +
+          'methods to expose this method in debug mode, e.g. by exposing constants ' +
+          'ahead-of-time.');
+      }
       return global.nativeCallSyncHook(moduleID, methodID, args);
     };
   } else {
@@ -96,7 +105,11 @@ function genMethod(moduleID: number, methodID: number, type: MethodType) {
       const onFail = hasErrorCallback ? secondLastArg : null;
       const callbackCount = hasSuccessCallback + hasErrorCallback;
       args = args.slice(0, args.length - callbackCount);
-      BatchedBridge.enqueueNativeCall(moduleID, methodID, args, onFail, onSuccess);
+      try {
+        BatchedBridge.enqueueNativeCall(moduleID, methodID, args, onFail, onSuccess);
+      } catch(e) {
+        ExceptionsManager.handleException(e, true);
+      }
     };
   }
   fn.type = type;
@@ -107,13 +120,13 @@ function arrayContains<T>(array: Array<T>, value: T): boolean {
   return array.indexOf(value) !== -1;
 }
 
-function createErrorFromErrorData(errorData: {message: string}): Error {
+function createErrorFromErrorData(errorData: {message: string}): ExtendedError {
   const {
     message,
     ...extraErrorInfo
-  } = errorData;
-  const error = new Error(message);
-  (error:any).framesToPop = 1;
+  } = errorData || {};
+  const error : ExtendedError = new Error(message);
+  error.framesToPop = 1;
   return Object.assign(error, extraErrorInfo);
 }
 

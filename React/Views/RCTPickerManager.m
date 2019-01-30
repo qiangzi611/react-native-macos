@@ -17,6 +17,11 @@
 
 RCT_EXPORT_MODULE()
 
++ (BOOL)requiresMainQueueSetup
+{
+  return NO;
+}
+
 - (NSView *)view
 {
   return [RCTPicker new];
@@ -44,13 +49,13 @@ RCT_CUSTOM_VIEW_PROPERTY(fontFamily, NSString, RCTPicker)
   view.font = [RCTFont updateFont:view.font withFamily:json ?: defaultView.font.familyName];
 }
 
-- (NSDictionary<NSString *, id> *)constantsToExport
-{
-  NSComboBox *view = [NSComboBox new];
-  return @{
-    @"ComponentHeight": @(view.intrinsicContentSize.height),
-    @"ComponentWidth": @(view.intrinsicContentSize.width)
-  };
-}
+//- (NSDictionary<NSString *, id> *)constantsToExport
+//{
+//  NSComboBox *view = [NSComboBox new];
+//  return @{
+//    @"ComponentHeight": @(view.intrinsicContentSize.height),
+//    @"ComponentWidth": @(view.intrinsicContentSize.width)
+//  };
+//}
 
 @end

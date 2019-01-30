@@ -16,11 +16,17 @@
 #import "RCTUtils.h"
 
 @implementation RCTDeviceInfo {
+  id subscription;
 }
 
 @synthesize bridge = _bridge;
 
 RCT_EXPORT_MODULE()
+
++ (BOOL)requiresMainQueueSetup
+{
+  return YES;
+}
 
 - (dispatch_queue_t)methodQueue
 {
@@ -30,9 +36,29 @@ RCT_EXPORT_MODULE()
 - (void)setBridge:(RCTBridge *)bridge
 {
   _bridge = bridge;
+  
+  NSWindow *currentWindow = RCTKeyWindow();
+  
+  subscription = [[NSNotificationCenter defaultCenter] addObserverForName:NSWindowDidResizeNotification
+                                                                   object:currentWindow queue:nil usingBlock:^(__unused NSNotification * n){
+    [self didReceiveNewContentSizeMultiplier];
+  }];
 }
 
-static NSDictionary *RCTExportedDimensions(RCTBridge *bridge)
+static BOOL RCTIsIPhoneX() {
+  static BOOL isIPhoneX = NO;
+  static dispatch_once_t onceToken;
+
+  dispatch_once(&onceToken, ^{
+    RCTAssertMainQueue();
+
+    isIPhoneX = NO;
+  });
+
+  return isIPhoneX;
+}
+
+static NSDictionary *RCTExportedDimensions(__unused RCTBridge *bridge)
 {
   RCTAssertMainQueue();
 
@@ -44,15 +70,28 @@ static NSDictionary *RCTExportedDimensions(RCTBridge *bridge)
                          @"scale": @(RCTScreenScale()),
                          @"fontScale": @(1) // TODO: fix accessibility bridge.accessibilityManager.multiplier)
                          };
+  
+  CGRect windowSize = RCTKeyWindow().frame;
+  NSDictionary *windowDims = @{
+                         @"width": @(windowSize.size.width),
+                         @"height": @(windowSize.size.height),
+                         @"scale": @(RCTScreenScale()),
+                         @"fontScale": @(1) // TODO: fix accessibility bridge.accessibilityManager.multiplier)
+                         };
   return @{
-           @"window": dims,
+           @"window": windowDims,
            @"screen": dims
            };
 }
 
+- (void)dealloc
+{
+  [NSNotificationCenter.defaultCenter removeObserver:self];
+}
+
 - (void)invalidate
 {
-  dispatch_async(dispatch_get_main_queue(), ^{
+  RCTExecuteOnMainQueue(^{
     self->_bridge = nil;
     [[NSNotificationCenter defaultCenter] removeObserver:self];
   });
@@ -60,19 +99,22 @@ static NSDictionary *RCTExportedDimensions(RCTBridge *bridge)
 
 - (NSDictionary<NSString *, id> *)constantsToExport
 {
-  NSMutableDictionary<NSString *, NSDictionary *> *constants = [NSMutableDictionary new];
-  constants[@"Dimensions"] = RCTExportedDimensions(_bridge);
-  return constants;
+  return @{
+    @"Dimensions": RCTExportedDimensions(_bridge),
+  };
 }
 
 - (void)didReceiveNewContentSizeMultiplier
 {
-  // Report the event across the bridge.
+  RCTBridge *bridge = _bridge;
+  RCTExecuteOnMainQueue(^{
+    // Report the event across the bridge.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  [_bridge.eventDispatcher sendDeviceEventWithName:@"didUpdateDimensions"
-                                              body:RCTExportedDimensions(_bridge)];
+    [bridge.eventDispatcher sendDeviceEventWithName:@"didUpdateDimensions"
+                                        body:RCTExportedDimensions(bridge)];
 #pragma clang diagnostic pop
+  });
 }
 
 @end

@@ -43,11 +43,9 @@ RCT_EXPORT_MODULE()
   [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-- (instancetype)init
++ (BOOL)requiresMainQueueSetup
 {
-  // We're only overriding this to ensure the module gets created at startup
-  // TODO (t11106126): Remove once we have more declarative control over module setup.
-  return [super init];
+  return YES;
 }
 
 - (void)setBridge:(RCTBridge *)bridge
@@ -87,13 +85,13 @@ RCT_EXPORT_METHOD(showMessage:(NSString *)message color:(NSColor *)color backgro
       CGRect frame = _window.frame;
       frame.origin.y = -10;
       [_window setOpaque:YES];
-      [_window setAlphaValue:0.7];
+      [_window setAlphaValue:0.9];
       [_window setBackgroundColor:backgroundColor];
       [_window setLevel:NSScreenSaverWindowLevel + 1];
 
       _label = [[NSTextField alloc] initWithFrame:frame];
       _label.font = [NSFont systemFontOfSize:22.0];
-      _label.textColor = [NSColor blackColor];
+      _label.textColor = color;
       _label.bordered = NO;
       _label.editable = NO;
       _label.selectable = NO;
@@ -130,10 +128,11 @@ RCT_EXPORT_METHOD(hide)
 
     [NSAnimationContext beginGrouping];
     [[NSAnimationContext currentContext] setDuration:0.35];
-    [_window setFrame: CGRectOffset(windowFrame, 0, -windowFrame.size.height) display:YES animate:YES];
+    [[_window animator] setFrame: CGRectOffset(windowFrame, 0, -windowFrame.size.height) display:YES animate:YES];
     [NSAnimationContext endGrouping];
-    [_window setFrame: windowFrame display:NO animate:YES];
+    
     _window = nil;
+    
 
   });
 }
@@ -165,6 +164,14 @@ RCT_EXPORT_METHOD(hide)
   }
   dispatch_async(dispatch_get_main_queue(), ^{
       [_label setStringValue:[progress description]];
+  });
+}
+
+- (void)invalidate
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [_window setFrame: CGRectOffset(_window.frame, 0, -_window.frame.size.height) display:NO animate:NO];
+    _window = nil;
   });
 }
 
